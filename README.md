@@ -1,6 +1,6 @@
-#Jos stams stable fluids
+# Jos stams stable fluids
 
-##Installation
+## Installation
 
 python -m venv .venv
 source .venv/bin/activate
