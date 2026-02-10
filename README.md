@@ -1,5 +1,5 @@
 # Jos stams stable fluids
-
+![til](./example.gif)
 ## Installation
 
 python -m venv .venv
