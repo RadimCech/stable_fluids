@@ -1,7 +1,6 @@
 # Jos stams stable fluids
 ![til](./example.gif)
-## Installation
+## inspired by:
+https://pages.cs.wisc.edu/~chaol/data/cs777/stam-stable_fluids.pdf
 
-python -m venv .venv
-source .venv/bin/activate
-pip install numpy scipy pygame
+https://github.com/Ceyron/machine-learning-and-simulation/blob/main/english/simulation_scripts/stable_fluids_python_simple.py
