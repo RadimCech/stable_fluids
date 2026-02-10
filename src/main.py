@@ -1,8 +1,5 @@
-import numpy as np
-from tqdm import tqdm
-
-from .fluidSolver import FluidSolver
-
+import pygame
+from .fluid_solver import FluidSolver
 
 
 if __name__ == "__main__":
@@ -15,10 +12,40 @@ if __name__ == "__main__":
         diffusion_rate=0.0001
     )
 
+    # Set up some initial forcing in the middle of the domain
+    mid = solver.n_points // 2
+    solver.forcing_field[mid-5:mid+5, mid-5:mid+5, 0] = 0.0
+    solver.forcing_field[mid-5:mid+5, mid-5:mid+5, 1] = 10.0
 
-    solver.forcing_field = np.ones(solver.vector_field_shape, dtype=np.float32)
-    solver.density = np.ones((solver.n_points, solver.n_points))
-    solver.density_prev = np.ones((solver.n_points, solver.n_points))
+    # Main simulation loop with pygame event handling
+    clock = pygame.time.Clock()
+    running = True
+    step_count = 0
+    max_steps = 450
 
-    for i in tqdm(range(10)):
-        solver.step()
+    print("Starting fluid simulation...")
+    print("Close the pygame window or press ESC to exit")
+
+    while running and step_count < max_steps:
+        if step_count > 150:
+            # Handle pygame events
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
+
+            # Update simulation
+            solver.step()
+        step_count += 1
+
+        # Control frame rate
+        clock.tick(60)  # 60 FPS
+
+        # Print progress occasionally
+        if step_count % 100 == 0:
+            print(f"Step {step_count}/{max_steps}")
+
+    print("Simulation completed!")
+    pygame.quit()

@@ -2,17 +2,20 @@ import numpy as np
 import scipy.sparse.linalg as splinalg
 from scipy import interpolate
 from .math_helper import laplace, divergence, gradient
-
+import pygame
 
 class FluidSolver:
 
-    def __init__(self, domain_size: float, n_points: int, dt: float, viscosity: float, diffusion_rate: float):
+    def __init__(self, domain_size: float, n_points: int, dt: float,
+                 viscosity: float, diffusion_rate: float,
+                 dissipation_rate: float = 0.0, window_size: int = 800):
+
         self.domain_size = domain_size
         self.n_points = n_points
         self.dt = dt
         self.viscosity = viscosity
         self.diffusion_rate = diffusion_rate
-
+        self.dissipation_rate = dissipation_rate
 
         self.vector_field_shape = (n_points, n_points, 2)
         self.element_length = self.domain_size / (self.n_points - 1)
@@ -26,6 +29,17 @@ class FluidSolver:
 
         self.density = np.zeros((n_points, n_points), dtype=np.float32)
         self.density_prev = np.zeros((n_points, n_points), dtype=np.float32)
+
+        # Pygame setup
+        self.window_size = window_size
+        self.screen = None
+        self.init_pygame()
+
+    def init_pygame(self):
+        """Initialize pygame for visualization"""
+        pygame.init()
+        self.screen = pygame.display.set_mode((self.window_size, self.window_size))
+        pygame.display.set_caption("Stable Fluid Simulation")
 
     def apply_boundary_conditions(self, field):
         if field.ndim == 2:  # Scalar field
@@ -42,7 +56,7 @@ class FluidSolver:
 
     def add_forces(self):
         self.velocity_field += self.dt * self.forcing_field
-        self.density_field += self.dt * np.linalg.norm(self.forcing_field, axis=-1)
+        self.density += self.dt * np.linalg.norm(self.forcing_field, axis=-1)
 
     def advection(self, advected_field, velocity_vector_field):
         # we need coordinates!
@@ -105,7 +119,47 @@ class FluidSolver:
             )[0].reshape((self.n_points, self.n_points))
             return vector_field - gradient(pressure, self.element_length)
 
+    def draw(self):
+        """Draw the density field using pygame"""
+        if self.screen is None:
+            return
 
+        # Normalize density for visualization (0 to 1 range)
+        max_density = np.max(self.density)
+        if max_density > 0:
+            normalized_density = np.clip(self.density / max_density, 0, 1)
+        else:
+            normalized_density = self.density
+
+        # Create a surface array for better performance
+        surface_array = np.zeros((self.window_size, self.window_size, 3), dtype=np.uint8)
+
+        # Scale up the density field to window size
+        scale_x = self.window_size / self.n_points
+        scale_y = self.window_size / self.n_points
+
+        # Map density values to colors more efficiently
+        for i in range(self.n_points):
+            for j in range(self.n_points):
+                # Get density value
+                density_val = normalized_density[i, j]
+
+                # Convert to grayscale (white = high density)
+                color_val = int(density_val * 255)
+
+                # Calculate pixel ranges
+                x_start = int(i * scale_x)
+                x_end = int((i + 1) * scale_x)
+                y_start = int(j * scale_y)
+                y_end = int((j + 1) * scale_y)
+
+                # Fill the corresponding pixels
+                surface_array[x_start:x_end, y_start:y_end] = [color_val, color_val, color_val]
+
+        # Create surface from array and blit to screen
+        surf = pygame.surfarray.make_surface(surface_array)
+        self.screen.blit(surf, (0, 0))
+        pygame.display.flip()
 
     def step(self):
         self.add_forces()
@@ -121,8 +175,6 @@ class FluidSolver:
         self.density = self.advection(self.density, self.velocity_field)
         #self.density = self.density / (1.0 + self.dt * self.dissipation_rate)
 
-
-        #draw
-
+        self.draw()
         self.velocity_field_prev = self.velocity_field.copy()
         self.density_prev = self.density.copy()
