@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse.linalg as splinalg
 from scipy import interpolate
-from .math_helper3 import laplace, divergence, gradient
+from .math_helper import laplace, divergence, gradient
 
 
 class FluidSolver:
@@ -12,6 +12,7 @@ class FluidSolver:
         self.dt = dt
         self.viscosity = viscosity
         self.diffusion_rate = diffusion_rate
+
 
         self.vector_field_shape = (n_points, n_points, 2)
         self.element_length = self.domain_size / (self.n_points - 1)
@@ -26,8 +27,22 @@ class FluidSolver:
         self.density = np.zeros((n_points, n_points), dtype=np.float32)
         self.density_prev = np.zeros((n_points, n_points), dtype=np.float32)
 
+    def apply_boundary_conditions(self, field):
+        if field.ndim == 2:  # Scalar field
+            field[0, :] = 0.0
+            field[-1, :] = 0.0
+            field[:, 0] = 0.0
+            field[:, -1] = 0.0
+        elif field.ndim == 3:  # Vector field
+            field[0, :, :] = 0.0
+            field[-1, :, :] = 0.0
+            field[:, 0, :] = 0.0
+            field[:, -1, :] = 0.0
+        return field
+
     def add_forces(self):
         self.velocity_field += self.dt * self.forcing_field
+        self.density_field += self.dt * np.linalg.norm(self.forcing_field, axis=-1)
 
     def advection(self, advected_field, velocity_vector_field):
         # we need coordinates!
@@ -75,31 +90,37 @@ class FluidSolver:
         )[0].reshape(original_shape)
 
     def projection(self, vector_field):
-        def poisson_operator(field_flattened):
-            field = field_flattened.reshape((self.n_points, self.n_points))
-            poisson_applied = laplace(field, self.element_length)
+            def poisson_operator(field_flattened):
+                field = field_flattened.reshape((self.n_points, self.n_points))
+                poisson_applied = laplace(field, self.element_length)
+                return poisson_applied.flatten()
 
-            return poisson_applied.flatten()
+            pressure = splinalg.cg(
+                A=splinalg.LinearOperator(
+                    shape=(self.n_points**2, self.n_points**2),
+                    matvec=poisson_operator,
+                ),
+                b=divergence(vector_field, self.element_length).flatten(),
+                maxiter=self.max_iter,
+            )[0].reshape((self.n_points, self.n_points))
+            return vector_field - gradient(pressure, self.element_length)
 
-        pressure = splinalg.cg(
-            A=splinalg.LinearOperator(
-                shape=(self.n_points**2, self.n_points**2),
-                matvec=poisson_operator,
-            ),
-            b=divergence(vector_field, self.element_length).flatten(),
-            maxiter=self.max_iter,
-        )[0].reshape((self.n_points, self.n_points))
 
-        return vector_field - gradient(pressure, self.element_length)
 
     def step(self):
         self.add_forces()
+
+        self.velocity_field = self.apply_boundary_conditions(self.velocity_field)
         self.velocity_field = self.diffusion(self.velocity_field, self.viscosity)
+        self.velocity_field = self.apply_boundary_conditions(self.velocity_field)
         self.velocity_field = self.advection(self.velocity_field, self.velocity_field)
+        self.velocity_field = self.apply_boundary_conditions(self.velocity_field)
         self.velocity_field = self.projection(self.velocity_field)
 
         self.density = self.diffusion(self.density, self.diffusion_rate)
         self.density = self.advection(self.density, self.velocity_field)
+        #self.density = self.density / (1.0 + self.dt * self.dissipation_rate)
+
 
         #draw
 

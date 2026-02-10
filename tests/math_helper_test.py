@@ -15,7 +15,7 @@ class TestPartialDerivatives:
 
     def test_partial_derivative_x_linear_field(self):
         """Test ∂/∂x of a linear field f(x,y) = x."""
-        # Create a field where f(x,y) = x (derivative should be 1)
+
         field = np.array([
             [0, 0, 0, 0],
             [1, 1, 1, 1],
@@ -25,9 +25,9 @@ class TestPartialDerivatives:
 
         result = partial_derivative_x(field, element_length=1.0)
 
-        # Interior points should have derivative = 1
+
         assert np.allclose(result[1:-1, 1:-1], 1.0)
-        # Boundaries should be zero
+
         assert np.all(result[0, :] == 0)
         assert np.all(result[-1, :] == 0)
 
@@ -55,8 +55,7 @@ class TestPartialDerivatives:
 
         result = partial_derivative_x(field, element_length=1.0)
 
-        # ∂(x²)/∂x = 2x
-        # At x=2 (middle row), derivative should be 4
+
         expected_middle = 2 * X[1:-1, 1:-1]
         assert np.allclose(result[1:-1, 1:-1], expected_middle)
 
@@ -71,7 +70,7 @@ class TestPartialDerivatives:
         result_h1 = partial_derivative_x(field, element_length=1.0)
         result_h2 = partial_derivative_x(field, element_length=2.0)
 
-        # With doubled element length, derivative should be halved
+
         assert np.allclose(result_h2[1:-1, 1:-1],
                           result_h1[1:-1, 1:-1] / 2)
 
@@ -88,7 +87,7 @@ class TestGradient:
 
         grad = gradient(field, element_length=1.0)
 
-        # Gradient should be [2, 3] everywhere in interior
+
         assert grad.shape == (*field.shape, 2)
         assert np.allclose(grad[1:-1, 1:-1, 0], 2.0)
         assert np.allclose(grad[1:-1, 1:-1, 1], 3.0)
@@ -127,7 +126,7 @@ class TestDivergence:
         vector_field = np.stack([X, Y], axis=-1).astype(float)
         div = divergence(vector_field, element_length=1.0)
 
-        # div([x, y]) = ∂x/∂x + ∂y/∂y = 1 + 1 = 2
+
         assert np.allclose(div[1:-1, 1:-1], 2.0)
 
     def test_divergence_shape(self):
@@ -150,7 +149,7 @@ class TestLaplace:
 
         lap = laplace(field, element_length=1.0)
 
-        # Laplacian of linear function is zero
+
         assert np.allclose(lap[1:-1, 1:-1], 0.0, atol=1e-10)
 
     def test_laplace_quadratic_field(self):
@@ -162,7 +161,7 @@ class TestLaplace:
 
         lap = laplace(field, element_length=1.0)
 
-        # ∇²(x² + y²) = 2 + 2 = 4
+
         assert np.allclose(lap[1:-1, 1:-1], 4.0)
 
     def test_laplace_element_length_scaling(self):
@@ -172,7 +171,7 @@ class TestLaplace:
         lap_h1 = laplace(field, element_length=1.0)
         lap_h2 = laplace(field, element_length=2.0)
 
-        # Laplacian scales as 1/h²
+
         assert np.allclose(lap_h2[1:-1, 1:-1],
                           lap_h1[1:-1, 1:-1] / 4)
 
@@ -186,7 +185,7 @@ class TestLaplace:
         dx = x[1] - x[0]
         lap = laplace(field, element_length=dx)
 
-        # ∇²(sin(x)sin(y)) = -2sin(x)sin(y)
+
         expected = -2 * field
         assert np.allclose(lap[1:-1, 1:-1],
                           expected[1:-1, 1:-1],
@@ -202,7 +201,7 @@ class TestBoundaryConditions:
         vector_field = np.random.rand(6, 6, 2)
         h = 1.0
 
-        # Test all functions
+
         for func, arg in [
             (partial_derivative_x, field),
             (partial_derivative_y, field),
@@ -211,14 +210,14 @@ class TestBoundaryConditions:
         ]:
             result = func(arg, h)
 
-            # Check all boundary rows/columns are zero
+
             assert np.all(result[0, :] == 0)
             assert np.all(result[-1, :] == 0)
             assert np.all(result[:, 0] == 0)
             assert np.all(result[:, -1] == 0)
 
 
-# Parametrized tests for different grid sizes
+
 @pytest.mark.parametrize("size", [3, 5, 10, 20])
 def test_laplace_on_various_sizes(size):
     """Test Laplacian works correctly on different grid sizes."""

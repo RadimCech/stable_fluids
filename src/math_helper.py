@@ -39,7 +39,7 @@ def divergence(vector_field, element_length):
 
     return divergence_applied
 
-#finite difference laplace operator on a square space
+#finite difference laplace operator with implicit neumann boundary conditions
 def laplace(field, element_length):
     diff = np.zeros_like(field)
 
