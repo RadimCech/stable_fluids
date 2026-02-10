@@ -1,4 +1,4 @@
-# Jos stams stable fluids
+# Jos stam's stable fluids
 ![til](./example.gif)
 ## inspired by:
 https://pages.cs.wisc.edu/~chaol/data/cs777/stam-stable_fluids.pdf
